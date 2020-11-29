@@ -598,7 +598,7 @@ burn_in = 3000
 flat_mcmc_samples = simple_mcmc_analysis(
     sampler, par=0, label=f'$H_0$', burn_in=burn_in)
 
-fig = corner.corner(flat_mcmc_samples[:, 5:10], show_titles=True)
+fig = corner.corner(flat_mcmc_samples[:, 33:35], show_titles=True)
 
 # %%
 
@@ -638,11 +638,7 @@ for i in range(len(flat_mcmc_samples[:, 0])):
     gs_freq[index] += 1
 
 print(gs_freq/np.sum(gs_freq))
-plt.hist(E_gs, bins=100,density=True)
-plt.xlabel('Energy per atom [meV]')
-plt.ylabel('Normalized frequency [a.u.]')
-plt.tight_layout()
-plt.savefig('E_hist.pdf')
+plt.hist(E_gs, bins=100)
 
 gs_index_bayes = np.argmax(gs_freq)
 
@@ -656,9 +652,6 @@ print(gs_index_bayes)
 # Plot the distribution of lowest energies.
 
 # %%
-
-
-# %%
 plt.errorbar(range(33), np.mean(flat_mcmc_samples_copy[:, :33], axis=0), yerr=np.std(
     flat_mcmc_samples_copy[:, :33], axis=0), fmt='.k', capsize=1.5, linewidth=0.7, markersize=4)
 # plt.scatter(range(33),parameters)
@@ -667,10 +660,9 @@ plt.errorbar(range(33), np.mean(flat_mcmc_samples_copy[:, :33], axis=0), yerr=np
 cs.get_cluster_vector(atoms).shape
 
 # %%
-radii_2 = [1.4460, 2.0450, 2.5046, 2.8921, 3.2334, 3.5420, 3.8258, 4.0900, 4.3381,
-           4.3381, 4.5728, 4.7960, 5.0092, 5.2137, 5.2137, 5.6005, 5.7841, 5.9621, 5.9621]
-radii_3 = [1.6697, 1.8915, 1.9280, 2.0217, 2.3077, 2.5028,
-           2.6515, 2.6750, 2.7165, 2.8921, 3.0404, 3.3395]
+plt.errorbar(range(33), np.mean(flat_mcmc_samples_copy[:, :33], axis=0), yerr=np.std(
+    flat_mcmc_samples_copy[:, :33], axis=0), fmt='.k', capsize=1.5, linewidth=0.7, markersize=4)
+plt.scatter(range(33), parameters)
 
 # %%
 plt.errorbar([0], np.mean(flat_mcmc_samples_copy[:, 0], axis=0), yerr=np.std(
