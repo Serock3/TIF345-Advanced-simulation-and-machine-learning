@@ -313,6 +313,8 @@ y_stand = y
 
 A = x_stand
 
+save_params=[]
+
 for alpha in alpha_list:
 
     # print(sum(params!=0))
@@ -324,7 +326,15 @@ for alpha in alpha_list:
     params = lasso.coef_
     aic, bic = get_aic_bic_sparse(A, y_stand, params)
 
+    
+
     nbr_params_list.append(sum(params != 0))
+
+    if sum(params != 0)==4:
+        #save_params.append(np.where(params!=0))
+        save_params.append(params[1:5])
+
+
     print(np.std(scaler.transform(params.reshape(1, 62))))
     aic_list.append(aic)
     bic_list.append(bic)
@@ -419,6 +429,8 @@ y_stand = y
 # y_stand=(y-np.mean(y))/np.std(y)
 # A_stand=(x-np.mean(y))/np.std(y)
 
+save_params=[]
+
 A = x_stand
 for threshold_lambda in lambda_list:
 
@@ -432,6 +444,11 @@ for threshold_lambda in lambda_list:
     aic, bic = get_aic_bic_sparse(A, y_stand, params)
 
     nbr_params_list.append(sum(params != 0))
+
+    if sum(params != 0)==2:
+        save_params.append(params[1:3])
+        #save_params.append(np.where(params!=0))
+
     aic_list.append(aic)
     bic_list.append(bic)
     rmse_train_list.append(cv_data.get('rmse_train'))
