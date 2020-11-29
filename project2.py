@@ -51,7 +51,7 @@ for i, row in enumerate(db.select()):
     E_mix = row.mixing_energy
     Pd_desity_list.append(sum(atomic_numbers == 46)/len(atomic_numbers))
     E_mix_list.append(E_mix)
-plt.scatter(Pd_desity_list, E_mix_list,4,'black')
+plt.scatter(Pd_desity_list, E_mix_list, 4, 'black')
 plt.xlabel('Pd concentration [a.u.]')
 plt.ylabel('Energy per atom [meV]')
 
@@ -186,7 +186,7 @@ for cutoff in cutoffs:
 
     x = np.array(x)
     if cutoff[0] == 6:
-        print('NUM PARAMETERS AT 6Å',x.shape[1])
+        print('NUM PARAMETERS AT 6Å', x.shape[1])
     # N, M = 200, 100
     A = x
     # parameters_true = np.random.normal(0, 1, (M, ))
@@ -212,7 +212,7 @@ for cutoff in cutoffs:
     mse_list.append(mse)
 # %%
 
-fig_IC = plt.figure(figsize=(6.4*0.8,4.8*0.8))
+fig_IC = plt.figure(figsize=(6.4*0.8, 4.8*0.8))
 plt.plot(cutoffs, aic_list, label='AIC')
 plt.plot(cutoffs, bic_list, label='BIC')
 
@@ -223,7 +223,7 @@ plt.legend()
 plt.tight_layout()
 plt.savefig('cutoff_IC.pdf')
 
-fig_rmse = plt.figure(figsize=(6.4*0.8,4.8*0.8))
+fig_rmse = plt.figure(figsize=(6.4*0.8, 4.8*0.8))
 plt.plot(cutoffs, rmse_train_list, label='Training')
 plt.plot(cutoffs, rmse_valid_list, label='Validation')
 
@@ -313,7 +313,7 @@ y_stand = y
 
 A = x_stand
 
-save_params=[]
+save_params = []
 
 for alpha in alpha_list:
 
@@ -326,14 +326,11 @@ for alpha in alpha_list:
     params = lasso.coef_
     aic, bic = get_aic_bic_sparse(A, y_stand, params)
 
-    
-
     nbr_params_list.append(sum(params != 0))
 
-    if sum(params != 0)==4:
-        #save_params.append(np.where(params!=0))
+    if sum(params != 0) == 4:
+        # save_params.append(np.where(params!=0))
         save_params.append(params[1:5])
-
 
     print(np.std(scaler.transform(params.reshape(1, 62))))
     aic_list.append(aic)
@@ -354,7 +351,7 @@ plt.legend()
 # plt.xlim(0.5,10)
 # plt.ylim(35,45)
 
-fig_rmse_vs_params = plt.figure(figsize=(6.4*0.8,4.8*0.8))
+fig_rmse_vs_params = plt.figure(figsize=(6.4*0.8, 4.8*0.8))
 plt.scatter(nbr_params_list, rmse_train_list, 4, label='Training')
 plt.scatter(nbr_params_list, rmse_valid_list, 4, label='Validation')
 
@@ -364,7 +361,7 @@ plt.legend()
 plt.tight_layout()
 plt.savefig('Lasso_RMSE.pdf')
 
-fig_IC = plt.figure(figsize=(6.4*0.8,4.8*0.8))
+fig_IC = plt.figure(figsize=(6.4*0.8, 4.8*0.8))
 plt.scatter(nbr_params_list, aic_list, 4, label='AIC')
 plt.scatter(nbr_params_list, bic_list, 4, label='BIC')
 
@@ -429,7 +426,7 @@ y_stand = y
 # y_stand=(y-np.mean(y))/np.std(y)
 # A_stand=(x-np.mean(y))/np.std(y)
 
-save_params=[]
+save_params = []
 
 A = x_stand
 for threshold_lambda in lambda_list:
@@ -445,9 +442,9 @@ for threshold_lambda in lambda_list:
 
     nbr_params_list.append(sum(params != 0))
 
-    if sum(params != 0)==2:
-        save_params.append(params[1:3])
-        #save_params.append(np.where(params!=0))
+    if sum(params != 0) == 4:
+        save_params.append(params[1:5])
+        # save_params.append(np.where(params!=0))
 
     aic_list.append(aic)
     bic_list.append(bic)
@@ -475,7 +472,7 @@ plt.xlabel(r'$\lambda$ [a.u.]')
 plt.ylabel('Number of parameters [a.u.]')
 # plt.xlim(0,1)
 
-fig_rmse_vs_params = plt.figure(figsize=(6.4*0.8,4.8*0.8))
+fig_rmse_vs_params = plt.figure(figsize=(6.4*0.8, 4.8*0.8))
 plt.scatter(nbr_params_list, rmse_train_list, 4, label='Training')
 plt.scatter(nbr_params_list, rmse_valid_list, 4, label='Validation')
 
@@ -485,7 +482,7 @@ plt.legend()
 plt.tight_layout()
 plt.savefig('ARDR_RMSE.pdf')
 
-fig_IC = plt.figure(figsize=(6.4*0.8,4.8*0.8))
+fig_IC = plt.figure(figsize=(6.4*0.8, 4.8*0.8))
 plt.scatter(nbr_params_list, aic_list, 4, label='AIC')
 plt.scatter(nbr_params_list, bic_list, 4, label='BIC')
 
@@ -526,7 +523,7 @@ def mean_mode_2_IG_alpha_beta(mean, mode):
     return alpha, beta
 
 
-a0_sig, b0_sig = mean_mode_2_IG_alpha_beta(100,1)
+a0_sig, b0_sig = mean_mode_2_IG_alpha_beta(100, 1)
 a0_alpha, b0_alpha = mean_mode_2_IG_alpha_beta(2500, 25)
 
 
@@ -537,34 +534,39 @@ def log_prior(j, sigma2, alpha2, nP):
 def log_likelihood(model, sigma2, data):
     return -np.sum((model-data)**2)/(2*sigma2)-0.5*len(data)*np.log(sigma2)
 
+
 def log_posterior(params, A, data, nP):
-    j=params[:nP]
-    sigma2=params[nP]
-    alpha2=params[nP+1]
+    j = params[:nP]
+    sigma2 = params[nP]
+    alpha2 = params[nP+1]
 
-    model=np.matmul(A, j)
+    model = np.matmul(A, j)
 
-    lp=log_prior(j, sigma2, alpha2, nP)
+    lp = log_prior(j, sigma2, alpha2, nP)
     if not np.isfinite(lp):
         return -np.inf
 
     return log_likelihood(model, sigma2, data)+lp
 
+
 # %% Sample posterior (for the given cluster candidates), visualize
-ndim, nwalkers=x.shape[1]+2, 100
+ndim, nwalkers = x.shape[1]+2, 100
 # start_pos = [70,0,0.1] + [1e-2,1e-2,1e-5]*np.random.randn(nwalkers, ndim)
 start_pos = [0]*x.shape[1]+[10]*np.random.randn(nwalkers, ndim-2)
-start_pos = np.append(start_pos,[7,30]+[1e-1]*np.random.randn(nwalkers, 2),axis=1)
+start_pos = np.append(start_pos, [7, 30]+[1e-1]
+                      * np.random.randn(nwalkers, 2), axis=1)
 
-steps= 5000
+steps = 5000
 
 
-sampler=emcee.EnsembleSampler(
-    nwalkers, ndim, log_posterior, args = (x, y, ndim-2))
-sampler.run_mcmc(start_pos, steps, progress = True)
+sampler = emcee.EnsembleSampler(
+    nwalkers, ndim, log_posterior, args=(x, y, ndim-2))
+sampler.run_mcmc(start_pos, steps, progress=True)
 
-#%%
-def simple_mcmc_analysis(sampler, par, label, burn_in, chain_from_file = False):
+# %%
+
+
+def simple_mcmc_analysis(sampler, par, label, burn_in, chain_from_file=False):
 
     if not chain_from_file:
         print(
@@ -575,14 +577,14 @@ def simple_mcmc_analysis(sampler, par, label, burn_in, chain_from_file = False):
     # This can be useful for reducing long autocorrelation lenghts in a chain. However, thinning is expensive.
     # A thinned chain must be run E.g. 10x longer to reach the desired number of samples.
     # One can argue that thinning is not an advantageous strategy. So keep thinning = 1
-    thinning=1
-    flat_mcmc_samples=sampler.get_chain(
-        discard = burn_in, thin = thinning, flat = True)
+    thinning = 1
+    flat_mcmc_samples = sampler.get_chain(
+        discard=burn_in, thin=thinning, flat=True)
     print(f'Discarding {nwalkers*burn_in} steps as burn-in')
     print(f'Chain length:{len(flat_mcmc_samples)}')
 
-    fig1=plt.figure()
-    plt.plot(flat_mcmc_samples[:, par], color = 'gray', alpha = 0.7)
+    fig1 = plt.figure()
+    plt.plot(flat_mcmc_samples[:, par], color='gray', alpha=0.7)
     plt.xlabel('Sample')
     plt.ylabel(label)
     plt.xlim(0, len(flat_mcmc_samples))
@@ -590,56 +592,62 @@ def simple_mcmc_analysis(sampler, par, label, burn_in, chain_from_file = False):
     return flat_mcmc_samples
 
 
-#%%
+# %%
 burn_in = 3000
 
-flat_mcmc_samples=simple_mcmc_analysis(
-    sampler, par = 0,label=f'$H_0$', burn_in = burn_in)
+flat_mcmc_samples = simple_mcmc_analysis(
+    sampler, par=0, label=f'$H_0$', burn_in=burn_in)
 
-fig=corner.corner(flat_mcmc_samples[:,33:35], show_titles = True)
+fig = corner.corner(flat_mcmc_samples[:, 5:10], show_titles=True)
+
+# %%
 
 
 # %% Do OLS with new cutoff, find lowest energy configuration among candidates
-db_gs=connect('structures/ground_state_candidates.db')
+db_gs = connect('structures/ground_state_candidates.db')
 
-x_gs=[]
+x_gs = []
 
 for i, row in enumerate(db_gs.select()):
-    atoms=row.toatoms()
+    atoms = row.toatoms()
     x_gs.append(cs.get_cluster_vector(atoms))
 
-x_gs=np.array(x_gs)
+x_gs = np.array(x_gs)
 
-parameters=run_OLS_fit(x, y)
-E_cand=np.matmul(x_gs, parameters)
+parameters = run_OLS_fit(x, y)
+E_cand = np.matmul(x_gs, parameters)
 
-gs_index=np.argmin(E_cand)
+gs_index = np.argmin(E_cand)
 print(gs_index)
 for i, row in enumerate(db_gs.select()):
-    if i==gs_index:
+    if i == gs_index:
         view(row.toatoms())
 
-#%%
+# %%
 
 # Calculate lowest energy candidate for each sample,
 # save lowest energy for each sample.
 
-E_gs=[]
-gs_freq=np.zeros(x_gs.shape[0])
+E_gs = []
+gs_freq = np.zeros(x_gs.shape[0])
 
-for i in range(len(flat_mcmc_samples[:,0])):
-    E=np.matmul(x_gs,flat_mcmc_samples[i,:33])
-    index=np.argmin(E)
+for i in range(len(flat_mcmc_samples[:, 0])):
+    E = np.matmul(x_gs, flat_mcmc_samples[i, :33])
+    index = np.argmin(E)
     E_gs.append(E[index])
-    gs_freq[index]+=1
+    gs_freq[index] += 1
 
 print(gs_freq/np.sum(gs_freq))
-plt.hist(E_gs,bins=100)
+plt.hist(E_gs, bins=100,density=True)
+plt.xlabel('Energy per atom [meV]')
+plt.ylabel('Normalized frequency [a.u.]')
+plt.tight_layout()
+plt.savefig('E_hist.pdf')
 
-gs_index_bayes=np.argmax(gs_freq)
+gs_index_bayes = np.argmax(gs_freq)
 
 for i, row in enumerate(db_gs.select()):
-    if i==gs_index_bayes:
+    if i == gs_index_bayes:
         view(row.toatoms())
 print(gs_index_bayes)
 
@@ -647,13 +655,65 @@ print(gs_index_bayes)
 
 # Plot the distribution of lowest energies.
 
-
-
 # %%
 
 
 # %%
-plt.errorbar(range(33),np.mean(flat_mcmc_samples_copy[:,:33],axis=0) , yerr=np.std(flat_mcmc_samples_copy[:,:33],axis=0),fmt='.k', capsize=1.5, linewidth=0.7, markersize=4)
-plt.scatter(range(33),parameters)
+plt.errorbar(range(33), np.mean(flat_mcmc_samples_copy[:, :33], axis=0), yerr=np.std(
+    flat_mcmc_samples_copy[:, :33], axis=0), fmt='.k', capsize=1.5, linewidth=0.7, markersize=4)
+# plt.scatter(range(33),parameters)
+
+# %%
+cs.get_cluster_vector(atoms).shape
+
+# %%
+radii_2 = [1.4460, 2.0450, 2.5046, 2.8921, 3.2334, 3.5420, 3.8258, 4.0900, 4.3381,
+           4.3381, 4.5728, 4.7960, 5.0092, 5.2137, 5.2137, 5.6005, 5.7841, 5.9621, 5.9621]
+radii_3 = [1.6697, 1.8915, 1.9280, 2.0217, 2.3077, 2.5028,
+           2.6515, 2.6750, 2.7165, 2.8921, 3.0404, 3.3395]
+
+# %%
+plt.errorbar([0], np.mean(flat_mcmc_samples_copy[:, 0], axis=0), yerr=np.std(
+    flat_mcmc_samples_copy[:, 0], axis=0), fmt='.k', capsize=1.5, linewidth=0.7, markersize=4,label=r'$J_0$')
+plt.errorbar([0], np.mean(flat_mcmc_samples_copy[:, 1], axis=0), yerr=np.std(
+    flat_mcmc_samples_copy[:, 1], axis=0), fmt='.C1', capsize=1.5, linewidth=0.7, markersize=4,label='Single atom cluster')
+
+plt.errorbar(radii_2, np.mean(flat_mcmc_samples_copy[:, 2:21], axis=0), yerr=np.std(
+    flat_mcmc_samples_copy[:, 2:21], axis=0), fmt='.C2', capsize=1.5, linewidth=0.7, markersize=4,label='Pair clusters')
+plt.errorbar(radii_3, np.mean(flat_mcmc_samples_copy[:, 21:33], axis=0), yerr=np.std(
+    flat_mcmc_samples_copy[:, 21:33], axis=0), fmt='.C0', capsize=1.5, linewidth=0.7, markersize=4,label='Triplet clusters')
+plt.legend()
+plt.xlabel('Cluster radius [Å]')
+plt.ylabel('ECI [meV]')
+plt.tight_layout()
+plt.savefig('ECIs.pdf')
+
+
+# %%
+plt.figure(figsize=(6.4*0.8, 4.8*0.8))
+plt.scatter(range(12),gs_freq/np.sum(gs_freq))
+plt.xlabel('Ground state candidate [a.u.]')
+plt.ylabel('Frequency of being ground state [a.u.]')
+plt.tight_layout()
+plt.savefig('gs_freq_mcmc.pdf')
+plt.figure(figsize=(6.4*0.8, 4.8*0.8))
+plt.errorbar(range(12),np.mean(Es,axis=0),np.std(Es,axis=0), fmt='.C1', capsize=3, linewidth=1.5, markersize=12,label='MCMC')
+plt.scatter(range(12),E_cand,label='OLS')
+# plt.scatter(range(12),gs_freq/np.sum(gs_freq),'.k',)
+plt.legend()
+plt.xlabel('Ground state candidate [a.u.]')
+plt.ylabel('Energy per atom [meV]')
+plt.tight_layout()
+plt.savefig('gs_Energy_OLS_v_MCMC.pdf')
+ # %%
+Es = []
+E_gs = []
+
+for i in range(len(flat_mcmc_samples[:, 0])):
+    E = np.matmul(x_gs, flat_mcmc_samples[i, :33])
+    Es.append(E)
+Es = np.array(Es)
+# %%
+
 
 # %%
