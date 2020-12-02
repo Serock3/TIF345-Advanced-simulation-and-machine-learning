@@ -295,6 +295,3 @@ for i in range(size):
 
 plt.plot(x,y)
 
-# %%
-
-

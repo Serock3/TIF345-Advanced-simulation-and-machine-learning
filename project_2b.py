@@ -93,7 +93,7 @@ def calc_surface_energy(surface):
 from ase.io import read
 surface = read('structures/surface_supercell.xyz')
 E_surface = calc_surface_energy(surface)
-size = 100
+size = 50
 xmax=16.65653
 ymax=2.884996
 E=np.empty((size,size))
@@ -107,7 +107,9 @@ z = surface.get_positions()[:, 2].max() + 3
 for xi in range(x.shape[0]):
     for yi in range(y.shape[0]):
         E[xi,yi] = calculate_adatom_energy(surface,(x[xi], y[yi],z))
-    print("xi = ",xi," done")
+    # print("xi = ",xi," done")
+    sys.stdout.write("\r%d%%" % (int)(100*(xi+1)/x.shape[0]))
+    sys.stdout.flush()
 
 # fig = plt.figure()
 # ax = fig.gca(projection='3d')
@@ -118,15 +120,19 @@ for xi in range(x.shape[0]):
 plt.contourf(x,y,E, cmap='hot')
 plt.colorbar()
 plt.savefig(fname='heatmap.pdf')
-
+np.savetxt('heatmap.dat',E)
+#%%
+E = np.loadtxt('heatmap.dat')
 #%%
 def min_fun(pos):
     x=pos[0]%xmax
     y=pos[1]%ymax
     return calculate_adatom_energy(surface,(x, y, z))
 
+
 #%%
-num_runs=200
+import sys
+num_runs=50
 start=np.random.rand(2,num_runs)
 startx=start[0]*xmax
 starty=start[1]*ymax
@@ -138,8 +144,15 @@ for i in range(num_runs):
     result_local.append(minimize(lambda Pos: calculate_adatom_energy(surface, (Pos[0],Pos[1],z)), [startx[i], starty[i]]))
     E_local[i]=result_local[i].fun
     x_local[i]=result_local[i].x
-    print("i=",i)
+    # print("i=",i)
+    sys.stdout.write("\r%d%%" % (int)(100*(i+1)/num_runs))
+    sys.stdout.flush()
+
+np.savetxt('E_local.dat', E_local)
+np.savetxt('x_local.dat', x_local)
 # %%
+E_local = np.loadtxt('E_local.dat')
+x_local = np.loadtxt('x_local.dat')
 plt.hist(E_local)
 plt.show()
 plt.scatter(x_local[:,0]%xmax,x_local[:,1]%ymax)
@@ -149,7 +162,7 @@ print(a[a!=0])
 plt.colorbar()
 plt.show()
 # %%
-plt.contourf(x,y,E, cmap='hot')
+plt.contourf(x,y,E.T, cmap='hot')
 #plt.scatter((x_local[:,1]%ymax)*xmax/ymax,(x_local[:,0]%xmax)*ymax/xmax)
 plt.scatter(x_local[:,0],x_local[:,1])
 plt.xlim((0,xmax))
@@ -177,13 +190,13 @@ for i in range(num_runs):
 
 
 # %%
-beta = 3
+beta = 5
 def neg_A(x, model):
     mu,sigma = model.predict(np.array(x,ndmin=2))
     return (mu-beta*sigma)[0]
 
 def new_sample(model):
-    num_runs=20
+    num_runs=10
     start=np.random.rand(num_runs,2)*np.array([xmax,ymax])
     #start=np.random.rand(2,num_runs)*np.array([xmax,ymax])
     startx=start[0]*xmax
@@ -201,8 +214,9 @@ def new_sample(model):
 # %%
 np.random.seed(2)
 k1 = GPy.kern.RBF(input_dim=2)
-k1['lengthscale'].constrain_bounded(0.1, 5)
-# k1['lengthscale'].set_prior(GPy.priors.Gamma(a=2, b=1))
+#k1['lengthscale'].constrain_bounded(0.1, 5)
+k1['lengthscale'].set_prior(GPy.priors.Gamma(a=2, b=1))
+k1['variance'].set_prior(GPy.priors.Gamma(a=2, b=1))
 k2 = GPy.kern.Bias(input_dim=2)
 kernel = k1 + k2
 
@@ -215,7 +229,8 @@ for i in range(num_runs3):
     x_new, E_new=new_sample(model)
     x_data=np.append(x_data,np.array(x_new,ndmin=2),axis=0)
     E_data=np.append(E_data,np.array(E_new,ndmin=2),axis=0)
-
+    sys.stdout.write("\r%d%%" % (int)(100*(i+1)/num_runs3))
+    sys.stdout.flush()
 
 #print(model)
 #model.
@@ -223,6 +238,33 @@ for i in range(num_runs3):
 
 plt.scatter(x_data[:,0],x_data[:,1])
 
+
 # %%
-1+1
+
+size = 20
+x_bayes = np.linspace(0,xmax,size)
+y_bayes = np.linspace(0,ymax,size)
+PES = np.empty((size,size))
+sig = np.empty((size,size))
+Acq = np.empty((size,size))
+
+for i,xi in enumerate(x_bayes):
+    for j,yi in enumerate(y_bayes):
+        mu,sigma= model.predict(np.array([xi,yi],ndmin=2))
+        PES[i,j]= mu
+        sig[i,j] = sigma
+        Acq[i,j] = -1*neg_A([xi,yi],model)
+
+# %%
+plt.contourf(x_bayes,y_bayes,Acq.T, cmap='hot')
+plt.colorbar()
+plt.scatter(x_data[:,0]%xmax,x_data[:,1]%ymax)
+# %%
+plt.contourf(x,y,E.T, cmap='hot')
+plt.colorbar()
+plt.scatter(x_data[:,0]%xmax,x_data[:,1]%ymax)
+# %%
+plt.contourf(x_bayes,y_bayes,sig.T, cmap='hot')
+plt.colorbar()
+plt.scatter(x_data[:,0]%xmax,x_data[:,1]%ymax)
 # %%
