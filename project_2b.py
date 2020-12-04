@@ -93,16 +93,16 @@ def calc_surface_energy(surface):
 from ase.io import read
 surface = read('structures/surface_supercell.xyz')
 E_surface = calc_surface_energy(surface)
-size = 50
+size = 200
 xmax=16.65653
 ymax=2.884996
 E=np.empty((size,size))
 
-x = np.arange(xmax/(size+1),xmax,xmax/(size+1))
-y = np.arange(ymax/(size+1),ymax,ymax/(size+1))
+x = np.linspace(0,xmax,size)
+y = np.linspace(0,ymax,size)
 z = surface.get_positions()[:, 2].max() + 3
 
-#%%
+#%% Task 1, generate E data
 
 for xi in range(x.shape[0]):
     for yi in range(y.shape[0]):
@@ -117,12 +117,14 @@ for xi in range(x.shape[0]):
 # surf = ax.heatmap(x, y, E, cmap=cm.coolwarm,
 #                        linewidth=0, antialiased=False)
 # plt.show()
-plt.contourf(x,y,E, cmap='hot')
+np.savetxt('heatmap.dat',E)
+#%% Load E data and plot
+E = np.loadtxt('heatmap.dat')
+plt.contourf(x,y,E.T, cmap='hot')
 plt.colorbar()
 plt.savefig(fname='heatmap.pdf')
-np.savetxt('heatmap.dat',E)
-#%%
-E = np.loadtxt('heatmap.dat')
+
+
 #%%
 def min_fun(pos):
     x=pos[0]%xmax
@@ -130,9 +132,9 @@ def min_fun(pos):
     return calculate_adatom_energy(surface,(x, y, z))
 
 
-#%%
+#%% Task 2
 import sys
-num_runs=50
+num_runs=500
 start=np.random.rand(2,num_runs)
 startx=start[0]*xmax
 starty=start[1]*ymax
@@ -174,74 +176,174 @@ plt.scatter(x_local[:,0]%xmax,x_local[:,1]%ymax)
 
 
 #%% Task 3, Start samples
-np.random.seed(123)
-num_runs=5
-start=np.random.rand(num_runs,2)
-startx=start[0]*xmax
-starty=start[1]*ymax
-E_data = np.empty((num_runs,1))
-x_data = start
-result_task3 = []
-for i in range(num_runs):
-    # minimize(min_fun, [startx[i], starty[i]])
-    #result_task3.append(minimize(lambda Pos: calculate_adatom_energy(surface, (Pos[0],Pos[1],z)), [startx[i], starty[i]]))
-    E_data[i]=calculate_adatom_energy(surface, (start[i,0],start[i,1],z))
-    #x_data[i,:]=start[i]
 
-
-# %%
-beta = 5
-def neg_A(x, model):
+def neg_A(x, model,beta):
     mu,sigma = model.predict(np.array(x,ndmin=2))
     return (mu-beta*sigma)[0]
 
-def new_sample(model):
-    num_runs=10
-    start=np.random.rand(num_runs,2)*np.array([xmax,ymax])
-    #start=np.random.rand(2,num_runs)*np.array([xmax,ymax])
-    startx=start[0]*xmax
-    starty=start[1]*ymax
-    E_data = np.empty(num_runs)
-    x_data = np.empty((num_runs,2))
+def new_sample(model,beta):
+    # num_runs=40
+    # start=np.random.rand(num_runs,2)*np.array([xmax,ymax])
+    # #start=np.random.rand(2,num_runs)*np.array([xmax,ymax])
+    # startx=start[0]*xmax
+    # starty=start[1]*ymax
+    # E_data = np.empty(num_runs)
+    # x_data = np.empty((num_runs,2))
+    # result_task3 = []
+    # for i in range(num_runs):
+    #     result_task3.append(minimize(neg_A, start[i],args=(model,beta), bounds=[(0,xmax),(0,ymax)]))
+    #     E_data[i]=result_task3[i].fun
+    #     x_data[i]=result_task3[i].x
+    #model.optimize_restarts()
+    size = 20
+    startx = np.linspace(0,xmax,size)
+    starty = np.linspace(0,ymax,size)
+    Acq = np.empty((size,size))
+
+    E_data =  np.empty(size*size)
+
+    for i,x in enumerate(startx):
+        for j,y in enumerate(starty):
+            E_data[i*size+j] = neg_A((x,y),model,beta)
+    ind = np.argmin(E_data)
+    i = ind//size
+    j = ind % size
+    
+    result_task3 = minimize(neg_A, [startx[i],starty[j]],args=(model,beta), bounds=[(0,xmax),(0,ymax)])
+    x=result_task3.x
+
+    return x, calculate_adatom_energy(surface, (x[0],x[1],z))
+# %%
+def mean_variance_2_G_alpha_beta(mean,variance):
+        alpha = mean**2/variance
+        beta = variance/mean
+        return alpha, beta
+
+def bayesian_opt(beta,tol,E_tol,seed):
+    np.random.seed(seed)
+    num_runs=5
+    start=np.random.rand(num_runs,2)
+    start = start*[xmax, ymax]
+    # startx=start[0]*xmax
+    # starty=start[1]*ymax
+    E_data = np.empty((num_runs,1))
+    x_data = start
     result_task3 = []
     for i in range(num_runs):
-        result_task3.append(minimize(neg_A, start[i],args=model,bounds=[(0,xmax),(0,ymax)]))
-        E_data[i]=result_task3[i].fun
-        x_data[i]=result_task3[i].x
-    #model.optimize_restarts()
+        # minimize(min_fun, [startx[i], starty[i]])
+        #result_task3.append(minimize(lambda Pos: calculate_adatom_energy(surface, (Pos[0],Pos[1],z)), [startx[i], starty[i]]))
+        E_data[i]=calculate_adatom_energy(surface, (start[i,0],start[i,1],z))
+        #x_data[i,:]=start[i]
+    
+    #np.random.seed(2)
+    
+    k1 = GPy.kern.RBF(input_dim=2)#,variance=0.2**2,lengthscale=1)
+    
+    #k1['lengthscale'].constrain_bounded(0.1, 5)
 
-    return start[np.argmin(E_data)], calculate_adatom_energy(surface, (start[np.argmin(E_data),0],start[np.argmin(E_data),1],z))
-# %%
-np.random.seed(2)
-k1 = GPy.kern.RBF(input_dim=2)
-#k1['lengthscale'].constrain_bounded(0.1, 5)
-k1['lengthscale'].set_prior(GPy.priors.Gamma(a=2, b=1))
-k1['variance'].set_prior(GPy.priors.Gamma(a=2, b=1))
-k2 = GPy.kern.Bias(input_dim=2)
-kernel = k1 + k2
+    # a_G,b_G = mean_variance_2_G_alpha_beta(0.9**2,0.4**2)
+    a_G,b_G = mean_variance_2_G_alpha_beta(0.8**2,0.25**2)
+    k1['lengthscale'].set_prior(GPy.priors.Gamma(a=a_G, b=1/b_G),warning=False)
 
-num_runs3=10
 
-for i in range(num_runs3):
+    # a_G,b_G = mean_variance_2_G_alpha_beta(0.3**2,0.04**2)
+    a_G,b_G = mean_variance_2_G_alpha_beta(0.6**2,0.04**2)
+    k1['variance'].set_prior(GPy.priors.Gamma(a=a_G, b=1/b_G),warning=False)
+
+
+    #k1['variance'].constrain_bounded(0,1)
+
+
+    k2 = GPy.kern.Bias(input_dim=2)
+    kernel = k1 + k2
+    num_runs3=150
+    #beta = 4
+    
+    for i in range(num_runs3):
+        model = GPy.models.GPRegression(x_data, E_data, kernel)
+        model.optimize()
+        
+        x_new, E_new=new_sample(model,beta)
+        x_data=np.append(x_data,np.array(x_new,ndmin=2),axis=0)
+        E_data=np.append(E_data,np.array(E_new,ndmin=2),axis=0)
+        sys.stdout.write("\r%d" % (i+1))
+        sys.stdout.flush()
+        
+        if (x_data[-1,0]-x_data[-2,0])**2+(x_data[-1,1]-x_data[-2,1])**2<tol**2 and (E_data[-1]-E_data[-2])**2<E_tol**2:
+            break
+    print(" ")
     model = GPy.models.GPRegression(x_data, E_data, kernel)
     model.optimize()
-    
-    x_new, E_new=new_sample(model)
-    x_data=np.append(x_data,np.array(x_new,ndmin=2),axis=0)
-    E_data=np.append(E_data,np.array(E_new,ndmin=2),axis=0)
-    sys.stdout.write("\r%d%%" % (int)(100*(i+1)/num_runs3))
-    sys.stdout.flush()
-
+    return x_data,E_data,model,i
 #print(model)
 #model.
 #mu,sigma = model.predict(np.array((1,1),ndmin=2))
+#%%
+E_truth = 0.2022901267038888
+X_truth = np.array([3.2590603 , 0.72125143])
+tol = 0.05#0.01
+E_tol = 0.0001#0.00005
+betas = np.linspace(0,10,20)
+#%%
+convs = []
+Es = []
+Xs = []
+models = []
+seeds = range(20)
+accuracy = []
+for beta in betas:
+    print('\nbeta =',beta)
+    accuracy.append(0)
+    for seed in seeds:  
+        x_data,E_data,model,i = bayesian_opt(beta,tol,E_tol,seed)
+        convs.append(i)
+        Es.append(E_data)
+        Xs.append(x_data)
+        models.append(model)
+        if ((E_data[-1]-E_surface-E_truth)**2<(20*E_tol)**2):
+            accuracy[-1] += 1
 
-plt.scatter(x_data[:,0],x_data[:,1])
+E_task3 = np.array([E[-1] for E in Es])-E_surface
+np.savetxt('E_task3.dat', E_task3)
+convs_task3 =[np.mean(convs[i*len(seeds):(i+1)*len(seeds)])for i in range(len(betas))]
+np.savetxt('convs_task3.dat', convs_task3)
+X_task3_0 = np.array([X[-1] for X in Xs])[:,0]
+X_task3_1 = np.array([X[-1] for X in Xs])[:,1]
+np.savetxt('X_task3_0.dat', X_task3_0)
+np.savetxt('X_task3_1.dat', X_task3_1)
+accuracy_task3 = np.array(accuracy)*100/len(seeds)
+np.savetxt('accuracy_task3.dat', accuracy_task3)
+#%%
+E_task3 = np.loadtxt('E_task3.dat')
+convs_task3 = np.loadtxt('convs_task3.dat')
+X_task3_0 = np.loadtxt('X_task3_0.dat')
+X_task3_1 = np.loadtxt('X_task3_1.dat')
+accuracy_task3 = np.loadtxt('accuracy_task3.dat')
+
+plt.plot(betas,convs_task3)
+plt.ylabel('Average num of opt iters')
+plt.figure()
+plt.plot(betas,accuracy_task3)
+plt.ylabel('Accuracy of convergence')
+plt.figure()
+plt.plot(E_task3)
+# plt.plot(betas,np.array([E[-1] for E in Es])-E_surface)
+plt.figure()
+plt.contourf(x,y,E.T, cmap='hot')
+plt.scatter(X_task3_0,X_task3_1)
+# plt.arrow(np.array(Xs)[0,0],np.array(Xs)[0,1],np.array(Xs)[1,0]-np.array(Xs)[0,0],np.array(Xs)[1,1]-np.array(Xs)[0,1])
+best = np.argmin(E_task3)
+# print("Best model: ", betas[best])
+
+
+# plt.scatter(x_data[:,0],x_data[:,1])
 
 
 # %%
-
-size = 20
+model = models[best]
+x_data = Xs[best]
+#%%
+size = 30
 x_bayes = np.linspace(0,xmax,size)
 y_bayes = np.linspace(0,ymax,size)
 PES = np.empty((size,size))
@@ -253,18 +355,79 @@ for i,xi in enumerate(x_bayes):
         mu,sigma= model.predict(np.array([xi,yi],ndmin=2))
         PES[i,j]= mu
         sig[i,j] = sigma
-        Acq[i,j] = -1*neg_A([xi,yi],model)
+        Acq[i,j] = -1*neg_A([xi,yi],model,beta)
 
 # %%
 plt.contourf(x_bayes,y_bayes,Acq.T, cmap='hot')
 plt.colorbar()
-plt.scatter(x_data[:,0]%xmax,x_data[:,1]%ymax)
+plt.scatter(x_data[:,0],x_data[:,1])
 # %%
-plt.contourf(x,y,E.T, cmap='hot')
+# plt.contourf(x,y,E.T, cmap='hot')
+plt.contourf(x_bayes,y_bayes,PES.T, cmap='hot')
 plt.colorbar()
-plt.scatter(x_data[:,0]%xmax,x_data[:,1]%ymax)
+plt.scatter(x_data[:,0],x_data[:,1])
+
 # %%
 plt.contourf(x_bayes,y_bayes,sig.T, cmap='hot')
 plt.colorbar()
-plt.scatter(x_data[:,0]%xmax,x_data[:,1]%ymax)
+plt.scatter(x_data[:,0],x_data[:,1])
+
+#%% evaluate best model
+
+x_data,E_data,model,i = bayesian_opt(2,tol,E_tol,18)
+# %% Task 4
+x_global = np.array([3.2590603 , 0.72125143])
+x_local = np.array((11,2.1))
+
+def E_path(Lambda):
+    x_current = x_global+Lambda*(x_local-x_global)
+    return  calculate_adatom_energy(surface, (x_current[0],x_current[1],z)
+
+def X_path(Lambda):
+    return (x_global+Lambda*(x_local-x_global)).reshape(1,2)
+
+k1 = GPy.kern.RBF(input_dim=1)#,variance=0.2**2,lengthscale=1)
+#k1['lengthscale'].constrain_bounded(0.1, 5)
+a_G,b_G = mean_variance_2_G_alpha_beta(1.1**2,0.5**2)   #Fix prior parameters
+k1['lengthscale'].set_prior(GPy.priors.Gamma(a=a_G, b=1/b_G))
+a_G,b_G = mean_variance_2_G_alpha_beta(0.3**2,0.03**2)  #Fix prior parameters
+k1['variance'].set_prior(GPy.priors.Gamma(a=a_G, b=1/b_G))
+k2 = GPy.kern.Bias(input_dim=1)
+kernel = k1 + k2
+
+def neg_A_path(x, model):
+    mu,sigma = model.predict(np.array(x,ndmin=2))
+    return (sigma)[0]
+
+for i in range(num_runs3):
+    model = GPy.models.GPRegression(x_data, E_data, kernel)
+    model.optimize()
+    
+    x_new, E_new=new_sample(model,beta)     #Rewrite this function "new_sample_path"
+    x_data=np.append(x_data,np.array(x_new,ndmin=2),axis=0)
+    E_data=np.append(E_data,np.array(E_new,ndmin=2),axis=0)
+ 
+# några startsamples
+# hitta minimum av negA (med liknande metod som ovan)
+# sample vid denna position
+# Sluta när något konvergenskravet för std'n är uppfyllt (eller bara använd 100-200 som dom skrev)
+
+# %%
+mu = []
+sig = []
+Lambdas = np.linspace(-0.5,1.5,100)
+for Lambda in Lambdas:
+    mu_tmp, sig_tmp= model.predict(X_path(Lambda))
+    mu.append(mu_tmp)
+    sig.append(sig_tmp)
+sig = np.array(sig).reshape(len(sig))
+mu = np.array(mu).reshape(len(mu))
+plt.plot(Lambdas,mu)
+plt.fill_between(Lambdas,mu-sig,mu+sig,alpha=0.5)
+# %%
+
+
+# %%
+1+1
+
 # %%
