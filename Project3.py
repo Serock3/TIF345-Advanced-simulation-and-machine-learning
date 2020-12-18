@@ -1,9 +1,9 @@
 # %%
 from sklearn.model_selection import train_test_split
 from sklearn.neural_network import MLPRegressor
-import board
+#import board
 import numpy as np
-from scipy.stats import norm, uniform
+from scipy.stats import norm, uniform,skew,kurtosis
 from matplotlib import pyplot as plt
 import seaborn as sns
 sns.set_context("paper", font_scale=1.5)
@@ -50,6 +50,7 @@ def controlled_experiment(alpha=0.25, s=0, size=1000):
 # %%
 mean = []
 variance = []
+
 n_runs = 100
 for j in range(n_runs):
     test = controlled_experiment(0.25, -0.25+0.5*j/n_runs)
@@ -77,29 +78,39 @@ plt.legend()
 plt.xlabel('alpha')
 # %%
 
+n_runs = 50
 mean = np.zeros((n_runs, n_runs))
 variance = np.zeros((n_runs, n_runs))
-
+mode = np.zeros((n_runs, n_runs))
+skewness = np.zeros((n_runs, n_runs))
 for j in range(n_runs):
     for k in range(n_runs):
-        test = controlled_experiment(0.5*j/n_runs, -0.25+0.5*k/n_runs)
-        mean[j, k] = np.sum([i*test[i]/1000 for i in range(32)])
-        variance[j, k] = np.sum(
-            [(i-mean[j, k])**2*test[i]/1000 for i in range(32)])
-    # print(j)
+        test = controlled_experiment(0.5*j/n_runs,-0.25+0.5*k/n_runs)
+        mean[j,k]=np.sum([i*test[i]/1000 for i in range(32)])
+        variance[j,k]=np.sum([(i-mean[j,k])**2*test[i]/1000 for i in range(32)])
+        mode[j,k]=(np.argmax(test))
+        skewness[j,k]=np.sum([((i-mean[j,k])/np.sqrt(variance[j,k]))**3*test[i]/1000 for i in range(32)])
+    #print(j)
 
 plt.contourf([0.5*j/n_runs for j in range(n_runs)],
-             [-0.25+0.5*j/n_runs for j in range(n_runs)], mean.T)
+             [-0.25+0.5*j/n_runs for j in range(n_runs)], mean.T,20)
 plt.ylabel('s')
 plt.xlabel('alpha')
 plt.colorbar()
 plt.title('mean')
 plt.figure()
 plt.contourf([0.5*j/n_runs for j in range(n_runs)],
-             [-0.25+0.5*j/n_runs for j in range(n_runs)], variance.T)
+             [-0.25+0.5*j/n_runs for j in range(n_runs)], variance.T,20)
 plt.ylabel('s')
 plt.xlabel('alpha')
 plt.title('variance')
+plt.colorbar()
+plt.figure()
+plt.contourf([0.5*j/n_runs for j in range(n_runs)],
+             [-0.25+0.5*j/n_runs for j in range(n_runs)], (skewness).T,20)
+plt.ylabel('s')
+plt.xlabel('alpha')
+plt.title('skew')
 plt.colorbar()
 # %% Helper functions to visualize the training of setup
 
@@ -165,10 +176,10 @@ def visualize_setup_1(mlpr, X_train, Y_train, X_test, Y_test):
 
 hidden_layer_sizes = (16, 8)
 reg_2 = MLPRegressor(hidden_layer_sizes, solver='sgd', activation='tanh',
-                     tol=1e-5, n_iter_no_change=100, max_iter=5000,
+                     tol=1e-6, n_iter_no_change=200, max_iter=2000,
                      alpha=0.0, momentum=0.9, learning_rate_init=0.1)
 
-n_samples = 100000
+n_samples = 30000
 n_bins = 32
 
 X = np.zeros((n_samples, n_bins))
@@ -197,11 +208,39 @@ ax.text(0.28, 0.98, text,
         fontsize=8, ha='left', va='top', transform=ax.transAxes)
 ax.set_xlabel('Iteration')
 ax.set_ylabel('Loss')
-# %% Root mean squared errors
+# %% mean squared errors for test set
 MSE = np.sum((reg_2.predict(X_train)-Y_train)
                      ** 2, axis=0)/Y_train.shape[0]
 print('MSE alpha ', MSE[0])
 print('MSE s ', MSE[1])
+
+#%% MSE for a grid of parameters
+
+n_runs = 20
+MSE_grid = np.zeros((n_runs,n_runs,2))
+Y = np.zeros((n_runs,n_runs, 2))
+n_samples = 20
+X = np.zeros((n_samples, n_bins))
+alpha = np.linspace(0,0.5,n_runs)
+s = np.linspace(-0.25,0.25,n_runs)
+for j in range(n_runs):
+    for k in range(n_runs):
+        Y[j,k, :] = [alpha[j], s[k]]
+        for i in range(n_samples):     
+            X[i, :] = controlled_experiment(alpha[j], s[k])*n_bins/1000
+        MSE_grid[j,k,:] = np.sum((reg_2.predict(X)-Y[i,j, :]) ** 2, axis=0)/n_samples
+
+plt.contourf(alpha,s,MSE_grid[:,:,0].T)
+plt.title('MSE alpha')
+plt.xlabel('alpha')
+plt.ylabel('s')
+plt.colorbar()
+plt.figure()
+plt.contourf(alpha,s,MSE_grid[:,:,1].T)
+plt.title('MSE s')
+plt.xlabel('alpha')
+plt.ylabel('s')
+plt.colorbar()
 # %% ML-supported ABC algorithm
 
 
@@ -245,21 +284,23 @@ def ABC_latent_var_elim(y_obs, kernel, NN, h_scale = 1, n_samples = 100, max_run
     h = np.array(statistic_std(theta_m))*h_scale
     # K0=kernel(np.array([0,0]),h)
 
-    g = norm(loc=theta_m,scale=np.sqrt(MSE))
+    g_s = norm(loc=theta_m[1],scale=np.sqrt(MSE[1]))
+    g_alpha=norm(loc=theta_m[0],scale=np.sqrt(MSE[0])) #uniform(0,0.5)
 
     thetas = np.empty((n_samples, 2))
     i = 0
     j = 0
     while i < n_samples:
-        theta = g.rvs()
+        s = g_s.rvs()
+        alpha=g_alpha.rvs()
         
-        y = controlled_experiment(0.5*np.random.rand(), theta[1])
+        y = controlled_experiment(alpha, s)
         stat_test = statistic(y)
         stat_test-stat_obs
-        acc_prob = kernel(stat_test-stat_obs, h)/(2*np.pi*h[0]*h[1])  # /K0
+        acc_prob = kernel(stat_test-stat_obs, h)  # /K0
 
         if(np.random.rand() < acc_prob):
-            thetas[i, :] = theta
+            thetas[i, :] = [alpha,s]
             i += 1
 
         j += 1
@@ -271,6 +312,52 @@ def ABC_latent_var_elim(y_obs, kernel, NN, h_scale = 1, n_samples = 100, max_run
     print('Acceptance ratio ', i/j)
     return thetas
 
+def ABC_importance_sampling(y_obs, kernel, NN, h_scale = 1, max_weight_sum = 100, max_runs = 10000):
+    theta_m = NN.predict((y_obs,))[0]
+
+    if not( 0<= theta_m[0] <=.5 ):
+        print("Alpha outside bounds at alpha=",theta_m[0])
+    if not(-0.25<= theta_m[1] <=0.25 ):
+        print("S outside bounds at s=",theta_m[1])
+    stat_obs = statistic(y_obs)
+    h = np.array(statistic_std(theta_m))*h_scale
+    # K0=kernel(np.array([0,0]),h)
+
+    g_s = norm(loc=theta_m[1],scale=np.sqrt(MSE[1]))
+    g_alpha=norm(loc=theta_m[0],scale=np.sqrt(MSE[0]))#uniform(0,0.5)
+
+    thetas = np.empty((max_runs, 2))
+    weights = np.empty(max_runs)
+    weight_sum = 0
+    i = 0
+    while weight_sum < max_weight_sum:
+        s = g_s.rvs()
+
+        if not(-0.25<= s <=0.25):
+            continue
+
+        alpha=g_alpha.rvs()
+        
+        y = controlled_experiment(alpha, s)
+        stat_test = statistic(y)
+        stat_test-stat_obs
+        weight = kernel(stat_test-stat_obs, h)/g_s.pdf(s)/g_alpha.pdf(alpha)  # /K0
+        weight_sum+=weight
+        weights[i] = weight
+        
+        thetas[i, :] = [alpha,s]
+        
+        i += 1
+        if(i%1000==0):
+            print("weight_sum = ",weight_sum," for i=",i)
+        if (i > max_runs-1):
+            break
+            # print('Weight_sum ', weight_sum)
+            # raise Exception("Max number of iterations reached! Increase h.")
+    
+    print('Number of iterations ', i)
+    print('Weight_sum ', weight_sum)
+    return thetas[:i,:],weights[:i]
 
 def kernel_gaussian(u, h):
     return np.exp(-np.sum((u/h)**2))
@@ -300,39 +387,66 @@ def statistic_std(theta, n_runs=500):
 
 
 # %% Test the method with controll values for alpha and s
+
 alpha = 0.15
-s = 0.25
-theta_samples = ABC_latent_var_elim(controlled_experiment(0.15, 0.1) *
-                    n_bins/1000, kernel_gaussian, reg_2,h_scale=0.25,n_samples=100,max_runs = 300*100)
+s = -0.2
 
-plt.hist2d(theta_samples[:, 0], theta_samples[:, 1])
-plt.figure()
-n, bins, patches = plt.hist(theta_samples[:, 0])
-plt.plot([alpha, alpha], [0, np.max(n)], label='true value')
-plt.legend()
-# %%
-alpha = 0.3
+n_samples=100
+n_random_runs=50
+theta_samples=np.empty((n_samples*n_random_runs,2))
 
-n_samples = 100
-n_random_samples = 100
-theta_samples=np.empty((n_random_samples*n_samples,2))
-
-
-for i in range(n_random_samples):
+for i in range(n_random_runs):
     s = np.random.rand()*0.5-0.25
-    theta_samples[i*n_samples:(i+1)*n_samples,:] = ABC_latent_var_elim(controlled_experiment(alpha,s) *
-                    n_bins/1000, kernel_gaussian, reg_2,h_scale=0.25,n_samples = n_samples)
+    y_obs_test=controlled_experiment(alpha, s)*n_bins/1000
+    theta_samples[i*n_samples:(i+1)*n_samples,:] =ABC_latent_var_elim(y_obs_test, kernel_gaussian, reg_2,h_scale=1,n_samples=n_samples,max_runs = 3000*n_samples)
+    
 
-n, bins, patches = plt.hist(theta_samples[:, 0])
+plt.hist2d(theta_samples[:, 0], theta_samples[:, 1],bins=30)
+plt.scatter(alpha,s)
+plt.figure()
+n, bins, patches = plt.hist(theta_samples[:, 0],bins=50)
 plt.plot([alpha, alpha], [0, np.max(n)], label='true value')
 plt.legend()
 
 #%%
+alpha = 0.15
+s = -0.2
+
+s_samples = np.empty((0))
+max_weight_sum=5
+h_scale=1.8
+n_random_runs=4
+
+theta_samples=np.empty((0,2))
+weights=np.empty(0)
+
+for i in range(n_random_runs):
+    s = np.random.rand()*0.5-0.25
+    y_obs_test=controlled_experiment(alpha, s)*n_bins/1000
+    theta_samples_tmp, weight_tmp = ABC_importance_sampling(y_obs_test, 
+        kernel_gaussian, reg_2,h_scale=h_scale,max_weight_sum=max_weight_sum,
+        max_runs = 10000*100)
+    theta_samples = np.append(theta_samples,theta_samples_tmp,axis=0)
+    weights = np.append(weights,weight_tmp)
+    s_samples = np.append(s_samples,s)
+
+plt.hist2d(theta_samples[:, 0], theta_samples[:, 1],weights=weights,bins=30)
+plt.scatter((alpha,)*n_random_runs,s_samples)
+plt.figure()
+n, bins, patches = plt.hist(theta_samples[:, 0],weights=weights,bins=50)
+plt.plot([alpha, alpha], [0, np.max(n)], label='true value')
+plt.legend()
+
+
+# %%
+theta_samples=ABC(controlled_experiment(0,0),kernel_gaussian,reg_2)
+#%%
+#plt.hist2d(theta_samples[:,0],theta_samples[:,1])
 
 running_mean=[]
 running_std=[]
 
-for i in range(n_random_samples):
+for i in range(n_random_runs):
     running_mean.append(np.mean(theta_samples[:(i+1)*n_samples,0]))
     running_std.append(np.std(theta_samples[:(i+1)*n_samples,0]))
 
@@ -341,6 +455,49 @@ plt.title(r'Running mean($\alpha$)')
 plt.figure()
 plt.plot(running_std)
 plt.title(r'Running std($\alpha$)')
+
+#%%
+alpha = 0.15
+s = 0.1
+y_obs_test=controlled_experiment(alpha, s)*n_bins/1000
+#%%
+theta_samples,weights = ABC_importance_sampling( y_obs_test, kernel_gaussian, reg_2,h_scale=2,max_weight_sum=20,max_runs = 10000*100)
+
+plt.hist2d(theta_samples[:, 0], theta_samples[:, 1],weights=weights,bins=30)
+plt.scatter(alpha,s)
+plt.figure()
+n, bins, patches = plt.hist(theta_samples[:, 0],weights=weights,bins=50)
+plt.plot([alpha, alpha], [0, np.max(n)], label='true value')
+plt.legend()
+
+#%% plot g(theta)
+plt.hist2d(theta_samples[:, 0], theta_samples[:, 1],bins=30)
+plt.scatter(alpha,s)
+plt.figure()
+n, bins, patches = plt.hist(theta_samples[:, 0],bins=50)
+plt.plot([alpha, alpha], [0, np.max(n)], label='true value')
+plt.legend()
+#%%
+theta_samples = ABC_latent_var_elim( y_obs_test, kernel_gaussian, reg_2,h_scale=0.5,n_samples=100,max_runs = 1000*100)
+
+plt.figure()
+plt.hist2d(theta_samples[:, 0], theta_samples[:, 1])
+plt.scatter(alpha,s)
+plt.figure()
+n, bins, patches = plt.hist(theta_samples[:, 0])
+plt.plot([alpha, alpha], [0, np.max(n)], label='true value')
+plt.legend()
+#%%
+
+theta_test=np.empty((500,2))
+alpha,s=0.1,-0.1
+for i in range(500):
+    theta_test[i,:] = reg_2.predict((controlled_experiment(alpha,s)*n_bins/1000,))[0]
+
+plt.hist2d(theta_test[:,0],theta_test[:,1],bins=20)
+plt.scatter(alpha,s)
+plt.xlabel('alpha')
+plt.ylabel('s')
 
 #%%
 
@@ -402,3 +559,6 @@ plt.title('standard deviation of the variance')
 plt.colorbar()
 
 # %%
+
+
+
