@@ -333,7 +333,7 @@ def ABC_importance_sampling(y_obs, kernel, NN, h_scale = 1, max_weight_sum = 100
     while weight_sum < max_weight_sum:
         s = g_s.rvs()
 
-        if not(-0.25<= s <=0.25):
+        if not(-0.25 <= s <= 0.25):
             continue
 
         alpha=g_alpha.rvs()
@@ -409,13 +409,13 @@ plt.plot([alpha, alpha], [0, np.max(n)], label='true value')
 plt.legend()
 
 #%%
-alpha = 0.15
+alpha = 0.35
 s = -0.2
 
 s_samples = np.empty((0))
-max_weight_sum=5
-h_scale=1.8
-n_random_runs=4
+max_weight_sum=7
+h_scale=1
+n_random_runs=50
 
 theta_samples=np.empty((0,2))
 weights=np.empty(0)
@@ -436,6 +436,14 @@ plt.figure()
 n, bins, patches = plt.hist(theta_samples[:, 0],weights=weights,bins=50)
 plt.plot([alpha, alpha], [0, np.max(n)], label='true value')
 plt.legend()
+
+#%%
+def weighted_mean(samples,weights):
+    return np.sum(samples*weights)/np.sum(weights)
+
+def weighted_std(samples, weights):
+    mean=weighted_mean(samples,weights)
+    return np.sqrt(weighted_mean((samples-mean)**2,weights))
 
 
 # %%
