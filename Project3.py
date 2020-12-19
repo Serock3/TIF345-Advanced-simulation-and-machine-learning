@@ -94,6 +94,7 @@ plt.ylabel('s')
 plt.xlabel('alpha')
 plt.colorbar()
 plt.title('mean')
+plt.savefig('mean_heatmap.pdf')
 plt.figure()
 plt.contourf([0.5*j/n_runs for j in range(n_runs)],
              [-0.25+0.5*j/n_runs for j in range(n_runs)], variance.T)
@@ -101,6 +102,7 @@ plt.ylabel('s')
 plt.xlabel('alpha')
 plt.title('variance')
 plt.colorbar()
+plt.savefig('var_heatmap.pdf')
 # %% Helper functions to visualize the training of setup
 
 
@@ -245,24 +247,34 @@ def ABC_latent_var_elim(y_obs, kernel, NN, h_scale = 1, n_samples = 100, max_run
     h = np.array(statistic_std(theta_m))*h_scale
     # K0=kernel(np.array([0,0]),h)
 
-    g = norm(loc=theta_m,scale=np.sqrt(MSE))
+    g_s = uniform(-0.25,0.5)#norm(loc=theta_m[1],scale=100*np.sqrt(MSE[1]))
+    g_alpha = uniform(0,0.5)
+    #g = uniform(0,0.5)
 
     thetas = np.empty((n_samples, 2))
     i = 0
     j = 0
     while i < n_samples:
-        theta = g.rvs()
+        s = g_s.rvs()
+        if not(-0.25<s<0.25):
+            continue
+        alpha = g_alpha.rvs()
         
-        y = controlled_experiment(0.5*np.random.rand(), theta[1])
+        y = controlled_experiment(alpha, s)
         stat_test = statistic(y)
         stat_test-stat_obs
-        acc_prob = kernel(stat_test-stat_obs, h)/(2*np.pi*h[0]*h[1])  # /K0
+        acc_prob = kernel(stat_test-stat_obs, h)*np.min(g_s.pdf([-0.25,0.25]))/g_s.pdf(s)#/(2*np.pi*h[0]*h[1])/  # /K0
 
+        if (j%3000==0): print(np.max(g_s.pdf([-0.25,0.25]))/g_s.pdf(s))
+        if(acc_prob>1):
+            raise Exception(
+                "Acceptance prob > 1")
         if(np.random.rand() < acc_prob):
-            thetas[i, :] = theta
+            thetas[i, :] = [alpha,s]
             i += 1
 
         j += 1
+        
         if (j > max_runs):
             print('Acceptance ratio ', i/j)
             raise Exception(
@@ -321,7 +333,7 @@ theta_samples=np.empty((n_random_samples*n_samples,2))
 for i in range(n_random_samples):
     s = np.random.rand()*0.5-0.25
     theta_samples[i*n_samples:(i+1)*n_samples,:] = ABC_latent_var_elim(controlled_experiment(alpha,s) *
-                    n_bins/1000, kernel_gaussian, reg_2,h_scale=0.25,n_samples = n_samples)
+                    n_bins/1000, kernel_gaussian, reg_2,h_scale=0.5,n_samples = n_samples,max_runs = 300*100)
 
 n, bins, patches = plt.hist(theta_samples[:, 0])
 plt.plot([alpha, alpha], [0, np.max(n)], label='true value')
