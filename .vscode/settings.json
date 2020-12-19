@@ -3,5 +3,5 @@
     "python.linting.enabled": true,
     "python.linting.flake8Enabled": false,
     "jupyter.jupyterServerType": "local",
-    "python.pythonPath": "/home/erik/anaconda3/bin/python"
+    "python.pythonPath": "/home/sebastian/miniconda3/envs/TIF345/bin/python"
 }
