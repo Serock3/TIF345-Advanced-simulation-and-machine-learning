@@ -431,16 +431,16 @@ plt.legend()
 alpha = 0.25
 s = -0.2
 
-# s_samples = np.empty((0))
-max_weight_sum=5
+s_samples = np.empty((0))
+max_weight_sum=1
 h_scale=1
-n_random_runs=50
+n_random_runs=200
 
-# theta_samples=np.empty((0,2))
-# weights=np.empty(0)
+theta_samples=np.empty((0,2))
+weights=np.empty(0)
 
-# running_mean=[]
-# running_std=[]
+running_mean=[]
+running_std=[]
 
 for i in range(n_random_runs):
     s = np.random.rand()*0.5-0.25
