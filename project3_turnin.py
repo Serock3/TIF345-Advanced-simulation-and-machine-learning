@@ -1,3 +1,8 @@
+# Project 3 by Sebastian Holmin and Erik Andersson
+# Nothing was explicitply stated in the project definition about the code,
+# we included it anyway but will assume, as in the other hand-ins, that
+# it will not be graded.
+
 # %%
 from sklearn.model_selection import train_test_split
 from sklearn.neural_network import MLPRegressor
@@ -47,35 +52,7 @@ def controlled_experiment(alpha=0.25, s=0, size=1000):
     return counts
 
 
-# %%
-mean = []
-variance = []
 
-n_runs = 100
-for j in range(n_runs):
-    test = controlled_experiment(0.25, -0.25+0.5*j/n_runs)
-    mean.append(np.sum([i*test[i]/1000 for i in range(32)]))
-    variance.append(np.sum([(i-mean[j])**2*test[i]/1000 for i in range(32)]))
-
-print(np.mean(mean))
-plt.plot([-0.25+0.5*j/n_runs for j in range(n_runs)],
-         variance, label='variance')
-plt.plot([-0.25+0.5*j/n_runs for j in range(n_runs)], mean, label='mean')
-plt.legend()
-plt.xlabel('s')
-# %%
-mean = []
-variance = []
-for j in range(n_runs):
-    test = controlled_experiment(j*0.5/n_runs, 0.2)
-    mean.append(np.sum([i*test[i]/1000 for i in range(32)]))
-    variance.append(np.sum([(i-mean[j])**2*test[i]/1000 for i in range(32)]))
-
-print(np.mean(mean))
-plt.plot([0.5*j/n_runs for j in range(n_runs)], variance, label='variance')
-plt.plot([0.5*j/n_runs for j in range(n_runs)], mean, label='mean')
-plt.legend()
-plt.xlabel('alpha')
 # %%
 
 n_runs = 50
@@ -113,14 +90,6 @@ plt.tight_layout()
 plt.savefig('dist_variance.pdf')
 
 
-
-plt.figure()
-plt.contourf([0.5*j/n_runs for j in range(n_runs)],
-             [-0.25+0.5*j/n_runs for j in range(n_runs)], (skewness).T,20)
-plt.ylabel('s')
-plt.xlabel('alpha')
-plt.title('skew')
-plt.colorbar()
 # %% Helper functions to visualize the training of setup
 
 
@@ -225,33 +194,7 @@ MSE = np.sum((reg_2.predict(X_train)-Y_train)
 print('MSE alpha ', MSE[0])
 print('MSE s ', MSE[1])
 
-#%% MSE for a grid of parameters
 
-n_runs = 20
-MSE_grid = np.zeros((n_runs,n_runs,2))
-Y = np.zeros((n_runs,n_runs, 2))
-n_samples = 20
-X = np.zeros((n_samples, n_bins))
-alpha = np.linspace(0,0.5,n_runs)
-s = np.linspace(-0.25,0.25,n_runs)
-for j in range(n_runs):
-    for k in range(n_runs):
-        Y[j,k, :] = [alpha[j], s[k]]
-        for i in range(n_samples):     
-            X[i, :] = controlled_experiment(alpha[j], s[k])*n_bins/1000
-        MSE_grid[j,k,:] = np.sum((reg_2.predict(X)-Y[i,j, :]) ** 2, axis=0)/n_samples
-
-plt.contourf(alpha,s,MSE_grid[:,:,0].T)
-plt.title('MSE alpha')
-plt.xlabel('alpha')
-plt.ylabel('s')
-plt.colorbar()
-plt.figure()
-plt.contourf(alpha,s,MSE_grid[:,:,1].T)
-plt.title('MSE s')
-plt.xlabel('alpha')
-plt.ylabel('s')
-plt.colorbar()
 # %% ML-supported ABC algorithm
 
 
@@ -375,13 +318,6 @@ def kernel_gaussian(u, h):
     return np.exp(-np.sum((u/h)**2))
 
 
-# us = np.linspace(-2, 2)
-# K = np.empty(50)
-# for i in range(50):
-#     K[i] = kernel_gaussian(us[i], np.array(1))
-# plt.plot(us, K)
-
-
 def statistic(y):
     mean = np.sum([i*y[i] for i in range(len(y))])/np.sum(y)
     var = np.sum([y[i]*(i-mean)**2 for i in range(len(y))])/np.sum(y)
@@ -442,29 +378,9 @@ def weighted_quantile(values, quantiles, sample_weight=None,
         weighted_quantiles /= np.sum(sample_weight)
     return np.interp(quantiles, weighted_quantiles, values)
 
-# %% Test the method with controll values for alpha and s
-
-alpha = 0.25
-#s = -0.2
-
-n_samples=100
-n_random_runs=50
-theta_samples_var_elim=np.empty((n_samples*n_random_runs,2))
-
-for i in range(n_random_runs):
-    s = np.random.rand()*0.5-0.25
-    y_obs_test=controlled_experiment(alpha, s)*n_bins/1000
-    theta_samples_var_elim[i*n_samples:(i+1)*n_samples,:] =ABC_latent_var_elim(y_obs_test, kernel_gaussian, reg_2,h_scale=1,n_samples=n_samples,max_runs = 3000*n_samples)
-    
-
-plt.hist2d(theta_samples_var_elim[:, 0], theta_samples_var_elim[:, 1],bins=30)
-plt.scatter(alpha,s)
-plt.figure()
-n, bins, patches = plt.hist(theta_samples_var_elim[:, 0],bins=50)
-plt.plot([alpha, alpha], [0, np.max(n)], label='true value')
-plt.legend()
 
 #%% Sample alpha from controlled experiment using importance ABC for multiple random s
+# This is what was used in the report
 
 alpha = 0.35
 max_weight_sum=15
@@ -503,7 +419,7 @@ for i,result in enumerate(results):
     sigma_plus=weighted_quantile(bins[:-1]+(bins[1]-bins[0])/2,0.5+0.34,result)
     sigma_min=weighted_quantile(bins[:-1]+(bins[1]-bins[0])/2,0.5-0.34,result)
     if i==0:
-        plt.errorbar(i,mu,yerr=np.array([mu-sigma_min,sigma_plus-mu]).reshape(2,1),color='C1',label=r'$1\sigma$ bound $p(y_m^{(N)}|\alpha)$',fmt = '.')
+        plt.errorbar(i,mu,yerr=np.array([mu-sigma_min,sigma_plus-mu]).reshape(2,1),color='C1',label=r'$1\sigma$ bound $p(y_m^{N}|\alpha)$',fmt = '.')
     else:
         plt.errorbar(i,mu,yerr=np.array([mu-sigma_min,sigma_plus-mu]).reshape(2,1),color='C1',fmt = '.')
     tot_post*=result
@@ -512,7 +428,7 @@ for i,result in enumerate(results):
     running_sig_min.append(weighted_quantile(bins[:-1]+(bins[1]-bins[0])/2,0.5-0.34,tot_post))
 
 
-plt.fill_between(range(len(results)),running_sig_min,running_sig_plus,alpha=0.3,label=r'Running $1\sigma$ bound $p(\alpha|\{y_m^{(i)}\}_{i=1}^N)$')
+plt.fill_between(range(len(results)),running_sig_min,running_sig_plus,alpha=0.3,label=r'Running $1\sigma$ bound $p(\alpha|\{y_m^{i}\}_{i=1}^N)$')
 plt.plot(range(len(results)),running_mu)
 plt.legend()
 plt.xlabel(r'Experiment runs $N$')
@@ -527,162 +443,6 @@ plt.xlabel(r'$\alpha$ [a.u.]')
 plt.ylabel(r'Posterior $p(\alpha|\{y_m^{i}\}_{i=1}^N)$ [a.u.]')
 plt.tight_layout()
 plt.savefig('posterior_exp.pdf')
-
-#%%
-
-#%%
-plt.hist2d(theta_samples[:, 0], theta_samples[:, 1],weights=weights,bins=30)
-plt.colorbar()
-# plt.scatter((alpha,)*len(s_samples),s_samples)
-plt.xlabel
-plt.figure()
-n, bins, patches = plt.hist(theta_samples[:, 0],weights=weights,bins=50,density=True)
-# plt.plot([alpha, alpha], [0, np.max(n)], label='true value')
-plt.legend()
-plt.xlabel(r'$\alpha [a.u.]$')
-plt.ylabel('Probability density [a.u.]')
-plt.tight_layout()
-plt.savefig('control_dist.pdf')
-
-#%%
-
-plt.figure(figsize=(6.4*0.8, 4.8*0.8))
-plt.plot(running_mean)
-plt.xlabel('Number of experiments run')
-plt.ylabel(r'Mean $\alpha$ prediction [a.u.]')
-plt.tight_layout()
-plt.savefig('mean_conv.pdf')
-plt.figure(figsize=(6.4*0.8, 4.8*0.8))
-plt.plot(np.array(running_std))
-plt.xlabel('Number of experiments run')
-plt.ylabel(r'Std of $\alpha$ prediction [a.u.]')
-plt.tight_layout()
-plt.savefig('std_conv.pdf')
-
-# %%
-theta_samples=ABC(controlled_experiment(0,0),kernel_gaussian,reg_2)
-#%%
-#plt.hist2d(theta_samples[:,0],theta_samples[:,1])
-
-running_mean=[]
-running_std=[]
-
-for i in range(n_random_runs):
-    running_mean.append(np.mean(theta_samples[:(i+1)*n_samples,0]))
-    running_std.append(np.std(theta_samples[:(i+1)*n_samples,0]))
-
-plt.plot(running_mean)
-plt.title(r'Running mean($\alpha$)')
-plt.figure()
-plt.plot(running_std)
-plt.title(r'Running std($\alpha$)')
-
-#%%
-alpha = 0.15
-s = 0.1
-y_obs_test=controlled_experiment(alpha, s)*n_bins/1000
-#%%
-theta_samples,weights = ABC_importance_sampling( y_obs_test, kernel_gaussian, reg_2,h_scale=2,max_weight_sum=20,max_runs = 10000*100)
-
-plt.hist2d(theta_samples[:, 0], theta_samples[:, 1],weights=weights,bins=30)
-plt.scatter(alpha,s)
-plt.figure()
-n, bins, patches = plt.hist(theta_samples[:, 0],weights=weights,bins=50)
-plt.plot([alpha, alpha], [0, np.max(n)], label='true value')
-plt.legend()
-
-#%% plot g(theta)
-plt.hist2d(theta_samples[:, 0], theta_samples[:, 1],bins=30)
-plt.scatter(alpha,s)
-plt.figure()
-n, bins, patches = plt.hist(theta_samples[:, 0],bins=50)
-plt.plot([alpha, alpha], [0, np.max(n)], label='true value')
-plt.legend()
-#%%
-theta_samples = ABC_latent_var_elim( y_obs_test, kernel_gaussian, reg_2,h_scale=0.5,n_samples=100,max_runs = 1000*100)
-
-plt.figure()
-plt.hist2d(theta_samples[:, 0], theta_samples[:, 1])
-plt.scatter(alpha,s)
-plt.figure()
-n, bins, patches = plt.hist(theta_samples[:, 0])
-plt.plot([alpha, alpha], [0, np.max(n)], label='true value')
-plt.legend()
-#%%
-
-theta_test=np.empty((1000,2))
-alpha,s=0.2,-0.25
-for i in range(1000):
-    theta_test[i,:] = reg_2.predict((controlled_experiment(alpha,s)*n_bins/1000,))[0]
-
-plt.hist2d(theta_test[:,0],theta_test[:,1],bins=20)
-plt.scatter(alpha,s)
-plt.xlabel('alpha')
-plt.ylabel('s')
-
-#%%
-
-
-def binary_search(arr, x):
-    low = 0
-    high = len(arr)-1
-
-    mid = (high + low) // 2
-    # If element is present at the middle itself
-    if arr[mid] == x:
-        return mid
-
-    # If element is smaller than mid, then it can only
-    # be present in left subarray
-    elif arr[mid] > x:
-        return binary_search(arr[:mid], x)
-
-    # Else the element can only be present in right subarray
-    else:
-        return mid+binary_search(arr[mid:], x)
-
-
-# Test array
-arr = [2, 3, 4, 10, 40]
-x = 3.5
-
-# Function call
-binary_search(arr, x)
-
-# %%
-
-grid = 20
-alpha = np.linspace(0, 0.5, grid)
-s = np.linspace(-0.25, 0.25, grid)
-
-n_runs = 100
-stat = np.empty((grid, grid, n_runs, 2))
-for i in range(grid):
-    for j in range(grid):
-        for k in range(n_runs):
-            stat[i, j, k] = statistic(controlled_experiment(alpha[i], s[j]))
-
-std = np.std(stat, axis=2)
-std_of_mean = std[:, :, 0]
-std_of_var = std[:, :, 1]
-
-plt.contourf(alpha, s, std_of_mean.T)
-plt.ylabel('s')
-plt.xlabel('alpha')
-plt.colorbar()
-plt.title('standard deviation o the mean')
-plt.figure()
-
-plt.contourf(alpha, s, std_of_var.T)
-plt.ylabel('s')
-plt.xlabel('alpha')
-plt.title('standard deviation of the variance')
-plt.colorbar()
-
-# %%
-1+1
-
-
 
 
 # %%
