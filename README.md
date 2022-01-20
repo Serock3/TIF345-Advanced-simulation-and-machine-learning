@@ -4,7 +4,7 @@ Repository for projects in the Chalmers course "TIF345 / FYM345 Advanced simulat
 
 Authors: Sebastian Holmin and Erik Andersson
 
-The code in this repository was used to produce the following four report:
+The code in this repository was used to produce the following four reports:
 
 ## [Cosmological models](TIF345_Project_1__Cosmological_models.pdf)
 
