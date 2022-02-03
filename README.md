@@ -34,7 +34,7 @@ In this project we investigate the use of Gaussian Processes (GP) to model the p
 
 ## [A Galton board on a rocking ship](TIF345_Project_3__A_Galton_board_on_a_rocking_ship.pdf)
 
-In this report we investigate the use of the Approximate Bayesian  omputation (ABC) algorithm, supported by a neural network (NN), to reverse engineer the parameters for a toy model of a Galton board on a rocking ship.
+In this report we investigate the use of the approximate Bayesian computation (ABC) algorithm, supported by a neural network (NN), to reverse engineer the parameters for a toy model of a Galton board on a rocking ship.
 
 A Galton board (bean machine) is a device that produces a normal distribution by utilizing the law of big numbers. It consists of rows of pegs where balls can roll a step to the left or the right at each row. Our toy model has 31 rows, giving 32 possible end positions for each ball, and two parameters ![formula](https://render.githubusercontent.com/render/math?math=\alpha) and ![formula](https://render.githubusercontent.com/render/math?math=s). The parameter ![formula](https://render.githubusercontent.com/render/math?math=\alpha) describes a simplified moment of inertia, i.e. the tendency for a ball to continue rolling in the same direction again for the next peg, while ![formula](https://render.githubusercontent.com/render/math?math=s) describes the incline of the rocking ship that the Galton board is situated on. The probability of a ball rolling to the right is then given by 
 
